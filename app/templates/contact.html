@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">📞 Contact Us</h2>
+    <p class="text-center lead">We are here to assist you. Feel free to reach out to us anytime!</p>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow p-4">
+                <h4 class="text-center">Send Us a Message</h4>
+                <form>
+                    <div class="form-group">
+                        <label for="name"><i class="fas fa-user"></i> Your Name</label>
+                        <input type="text" class="form-control" id="name" placeholder="Enter your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="email"><i class="fas fa-envelope"></i> Your Email</label>
+                        <input type="email" class="form-control" id="email" placeholder="Enter your email">
+                    </div>
+                    <div class="form-group">
+                        <label for="message"><i class="fas fa-comment"></i> Your Message</label>
+                        <textarea class="form-control" id="message" rows="4" placeholder="Type your message"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block mt-3">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow p-4">
+                <h4 class="text-center">📍 Our Location</h4>
+                <p class="text-center">Visit us or get in touch with our team.</p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <i class="fas fa-map-marker-alt text-danger"></i>
+                        <strong> Address:</strong> 123 Health St, City, Country
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-envelope text-primary"></i>
+                        <strong> Email:</strong> contact@hospital.com
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-phone text-success"></i>
+                        <strong> Phone:</strong> +123 456 7890
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-clock text-warning"></i>
+                        <strong> Working Hours:</strong> Mon - Sat, 8 AM - 8 PM
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
