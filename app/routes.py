@@ -27,17 +27,23 @@ def login(role):
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        
-        if user and check_password_hash(user.password, form.password.data):  
-            if user.role.name == role:  
-                login_user(user)
-                flash('Login successful!', 'success')
-                return redirect(url_for('main_routes.dashboard'))
-            else:
-                flash(f'Invalid role for {role}. Please log in with the correct role.', 'danger')
-        else:
-            flash('Login failed. Check email and/or password.', 'danger')
-    
+
+        if not user:
+            flash('User does not exist. Please register first.', 'danger')
+            return redirect(url_for('main_routes.register'))
+
+        if user.role.name.lower() != role.lower():
+            flash(f'Invalid role for {role}. Please log in with the correct role.', 'danger')
+            return redirect(url_for('main_routes.login', role=role))
+
+        if not bcrypt.check_password_hash(user.password, form.password.data):
+            flash("Incorrect password. Please try again.", "danger")
+            return redirect(url_for('main_routes.login', role=role))
+
+        login_user(user, remember=True)
+        flash("Login successful!", "success")
+        return redirect(url_for('main_routes.dashboard'))
+
     return render_template('login.html', role=role, form=form)
 
 @main_routes.route('/dashboard')
@@ -56,7 +62,7 @@ def register():
             flash('Email already exists! Please use a different email.', 'danger')
             return render_template('register.html', form=form)
         
-        hashed_password = generate_password_hash(form.password.data, method='sha256')
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         role = Role.query.get(form.role.data) 
         new_user = User(username=form.username.data, email=form.email.data, password=hashed_password, role=role)
         
