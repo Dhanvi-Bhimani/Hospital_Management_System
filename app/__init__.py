@@ -27,8 +27,9 @@ def create_app():
     
     login_manager.login_view = 'main_routes.login'  
     login_manager.session_protection = "strong"  
-    from .routes import main_routes
+    from .routes import main_routes, admin_routes
     app.register_blueprint(main_routes)
+    app.register_blueprint(admin_routes, url_prefix='/admin')  
 
     return app
 
