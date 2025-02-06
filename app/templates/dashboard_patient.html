@@ -1,0 +1,49 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4">Patient Dashboard</h1>
+    <hr>
+
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <i class="fas fa-calendar-check"></i> My Appointments
+        </div>
+        <div class="card-body">
+            {% if appointments %}
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Appointment Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in appointments %}
+                        <tr>
+                            <td>{{ appt.doctor.first_name }} {{ appt.doctor.last_name }}</td>
+                            <td>{{ appt.appointment_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ appt.status }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No upcoming appointments.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <i class="fas fa-file-medical"></i> Medical Records
+        </div>
+        <div class="card-body">
+            <a href="{{ url_for('patient.medical_records') }}" class="btn btn-primary">View Records</a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
