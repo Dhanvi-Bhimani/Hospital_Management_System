@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center mb-4">Select Your Role</h2>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h4><i class="fas fa-user-tie"></i> Role Selection</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="/login/admin" class="list-group-item list-group-item-action text-center">
+                            <i class="fas fa-user-shield"></i> Admin
+                        </a>
+                        <a href="/login/doctor" class="list-group-item list-group-item-action text-center">
+                            <i class="fas fa-user-md"></i> Doctor
+                        </a>
+                        <a href="/login/patient" class="list-group-item list-group-item-action text-center">
+                            <i class="fas fa-procedures"></i> Patient
+                        </a>
+                        <a href="/login/staff" class="list-group-item list-group-item-action text-center">
+                            <i class="fas fa-user-nurse"></i> Staff (Nurse, Receptionist)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

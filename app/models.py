@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_login import UserMixin
 
-db = SQLAlchemy()
+from app import db
 
 class Role(db.Model):
     __tablename__ = 'role'
@@ -15,10 +15,9 @@ class User(db.Model, UserMixin):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
-    
-    role = db.relationship('Role', backref=db.backref('users', lazy=True))
 
 class Patient(db.Model):
     __tablename__ = 'patient'
@@ -29,7 +28,7 @@ class Patient(db.Model):
     gender = db.Column(db.String(10), nullable=False)
     contact_number = db.Column(db.String(15))
     medical_history = db.Column(db.Text)
-    
+
     appointments = db.relationship('Appointment', backref='patient', lazy=True)
     prescriptions = db.relationship('Prescription', backref='patient', lazy=True)
 
@@ -39,10 +38,9 @@ class Appointment(db.Model):
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
     doctor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     appointment_date = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(50), default='Pending')  
+    status = db.Column(db.String(50), default='Pending')
 
-    patient = db.relationship('Patient', backref=db.backref('appointments', lazy=True))
-    doctor = db.relationship('User', backref=db.backref('appointments', lazy=True))
+    doctor = db.relationship('User', backref='appointments', lazy=True)
 
 class Billing(db.Model):
     __tablename__ = 'billing'
@@ -52,8 +50,6 @@ class Billing(db.Model):
     paid_amount = db.Column(db.Float, default=0)
     balance_amount = db.Column(db.Float, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-
-    patient = db.relationship('Patient', backref=db.backref('billing', lazy=True))
 
 class Pharmacy(db.Model):
     __tablename__ = 'pharmacy'
@@ -72,8 +68,6 @@ class Prescription(db.Model):
     start_date = db.Column(db.DateTime, default=datetime.utcnow)
     end_date = db.Column(db.DateTime)
 
-    patient = db.relationship('Patient', backref=db.backref('prescriptions', lazy=True))
-
 class LaboratoryTest(db.Model):
     __tablename__ = 'laboratory_test'
     id = db.Column(db.Integer, primary_key=True)
@@ -82,16 +76,9 @@ class LaboratoryTest(db.Model):
     test_date = db.Column(db.DateTime, default=datetime.utcnow)
     result = db.Column(db.Text)
 
-    patient = db.relationship('Patient', backref=db.backref('laboratory_tests', lazy=True))
-
 class Staff(db.Model):
     __tablename__ = 'staff'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     position = db.Column(db.String(100), nullable=False)
     contact_number = db.Column(db.String(15))
-
-    user = db.relationship('User', backref=db.backref('staff', lazy=True))
-
-def init_db():
-    db.create_all()
