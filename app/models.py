@@ -82,3 +82,19 @@ class Staff(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     position = db.Column(db.String(100), nullable=False)
     contact_number = db.Column(db.String(15))
+
+class Payment(db.Model):
+    __tablename__ = 'payment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50), nullable=False)  
+    payment_status = db.Column(db.String(20), nullable=False, default='Pending')  
+    transaction_id = db.Column(db.String(100), unique=True, nullable=True) 
+    payment_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    patient = db.relationship('Patient', backref='payments', lazy=True)
+    
+    def __repr__(self):
+        return f"<Payment {self.id} - {self.patient_id} - {self.amount}>"
