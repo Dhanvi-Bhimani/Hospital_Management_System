@@ -3,10 +3,50 @@ from flask_login import login_user, login_required, logout_user, current_user
 from psycopg2 import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from .forms import LoginForm, RegistrationForm, UserForm
-from .models import User, db, Role, Appointment, Prescription, Payment
+from .models import User, db, Role, Appointment, Prescription, Payment, MedicalRecord, Doctor, Patient, Staff
 from . import bcrypt 
+from datetime import datetime
 main_routes = Blueprint('main_routes', __name__)
 admin_routes = Blueprint('admin', __name__)
+patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
+
+@patient_bp.route('/dashboard', methods=['GET'])
+@login_required
+def patient_dashboard():
+    appointments = Appointment.query.filter_by(patient_id=current_user.id).all()
+    return render_template('dashboard_patient.html', appointments=appointments)
+
+from datetime import datetime
+
+@patient_bp.route('/appointments/book', methods=['GET', 'POST'])
+@login_required
+def book_appointment():
+    if request.method == 'POST':
+        doctor_id = request.form['doctor_id']
+        appointment_date_str = request.form['appointment_date']
+
+        # Convert string to datetime object
+        appointment_date = datetime.strptime(appointment_date_str, "%Y-%m-%dT%H:%M")
+
+        new_appointment = Appointment(
+            patient_id=current_user.id,
+            doctor_id=doctor_id,
+            appointment_date=appointment_date
+        )
+        db.session.add(new_appointment)
+        db.session.commit()
+
+        return redirect(url_for('patient.patient_dashboard'))
+    
+    doctors = Doctor.query.all()  
+    return render_template('book_appointment.html', doctors=doctors)
+
+
+@patient_bp.route('/medical_records', methods=['GET'])
+@login_required
+def medical_records():
+    records = MedicalRecord.query.filter_by(patient_id=current_user.id).all()
+    return render_template('medical_records.html', records=records)
 
 @admin_routes.route('/manage_users')
 @login_required
@@ -199,6 +239,18 @@ def register():
         new_user = User(username=form.username.data, email=form.email.data, password=hashed_password, role=role)
         
         db.session.add(new_user)
+        db.session.commit()
+        
+        if role.name.lower() == "doctor":
+            new_doctor = Doctor(user_id=new_user.id, first_name=new_user.username, last_name="", email=new_user.email, specialization="General")
+            db.session.add(new_doctor)
+        elif role.name.lower() == "patient":
+            new_patient = Patient(user_id=new_user.id, first_name=new_user.username, last_name="", date_of_birth=datetime.utcnow(), gender="Other", medical_history="None")
+            db.session.add(new_patient)
+        elif role.name.lower() == "staff":
+            new_staff = Staff(user_id=new_user.id, position="Receptionist", contact_number="")
+            db.session.add(new_staff)
+
         db.session.commit()
 
         flash('Your account has been created!', 'success')
