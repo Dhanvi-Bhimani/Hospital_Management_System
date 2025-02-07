@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4">Medical Records</h1>
+    <hr>
+
+    {% if records %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Record Type</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.record_type }}</td>
+                    <td>{{ record.record_date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ record.description }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No medical records found.</p>
+    {% endif %}
+</div>
+{% endblock %}
