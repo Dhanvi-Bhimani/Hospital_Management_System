@@ -24,13 +24,8 @@ class LoginForm(FlaskForm):
 class UserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=3, max=25)])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[
-        DataRequired(),
-        Length(min=6),
-        EqualTo('confirm_password', message='Passwords must match')
-    ])
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
-    role = SelectField('Role', coerce=int, validators=[DataRequired()])  # Role dropdown
+    role = SelectField('Role', coerce=int, validators=[DataRequired()])  
+    password = StringField('Default Password', default="Default@1234", render_kw={'readonly': True})  
     submit = SubmitField('Submit')
 
     def __init__(self, *args, **kwargs):
