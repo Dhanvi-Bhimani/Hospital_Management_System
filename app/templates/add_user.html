@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container">
-    <h2 class="mt-4">Add New User</h2>
+    <h2 class="mt-4">Add User</h2>
     <form method="POST">
         {{ form.hidden_tag() }}
 
@@ -15,18 +15,96 @@
             {{ form.email.label }} 
             {{ form.email(class="form-control", placeholder="Enter email") }}
         </div>
-        
+
         <div class="form-group">
             {{ form.password.label }} 
-            {{ form.password(class="form-control", readonly=True) }}
+            {{ form.password(class="form-control", id="password", readonly=True) }}
         </div>
 
         <div class="form-group">
             {{ form.role.label }} 
-            {{ form.role(class="form-control") }}
+            {{ form.role(class="form-control", id="role-select") }}
         </div>
 
-        <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
+        <div id="doctor-fields" class="role-specific" style="display: none;">
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="doctor_first_name" class="form-control" value="{{ doctor.first_name if doctor else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" name="doctor_last_name" class="form-control" value="{{ doctor.last_name if doctor else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Specialization</label>
+                <input type="text" name="doctor_specialization" class="form-control" value="{{ doctor.specialization if doctor else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="text" name="doctor_contact_number" class="form-control" value="{{ doctor.contact_number if doctor else '' }}">
+            </div>
+        </div>
+
+        <div id="patient-fields" class="role-specific" style="display: none;">
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="patient_first_name" class="form-control" value="{{ patient.first_name if patient else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" name="patient_last_name" class="form-control" value="{{ patient.last_name if patient else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Date of Birth</label>
+                <input type="date" name="patient_date_of_birth" class="form-control" value="{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient and patient.date_of_birth else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Gender</label>
+                <select name="patient_gender" class="form-control">
+                    <option value="Male" {% if patient and patient.gender == 'Male' %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if patient and patient.gender == 'Female' %}selected{% endif %}>Female</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="text" name="patient_contact_number" class="form-control" value="{{ patient.contact_number if patient else '' }}">
+            </div>
+        </div>
+
+        <div id="staff-fields" class="role-specific" style="display: none;">
+            <div class="form-group">
+                <label>Position</label>
+                <input type="text" name="staff_position" class="form-control" value="{{ staff.position if staff else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="text" name="staff_contact_number" class="form-control" value="{{ staff.contact_number if staff else '' }}">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success mt-3">Update</button>
     </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const roleSelect = document.getElementById("role-select");
+    const roleFields = {
+        "2": "doctor-fields",
+        "3": "patient-fields",
+        "4": "staff-fields"
+    };
+
+    function toggleRoleFields() {
+        document.querySelectorAll(".role-specific").forEach(div => div.style.display = "none");
+        const selectedRole = roleSelect.value;
+        if (roleFields[selectedRole]) {
+            document.getElementById(roleFields[selectedRole]).style.display = "block";
+        }
+    }
+
+    roleSelect.addEventListener("change", toggleRoleFields);
+    toggleRoleFields(); 
+});
+</script>
 {% endblock %}

@@ -5,88 +5,158 @@
     <h1 class="mt-4">Doctor Dashboard</h1>
     <hr>
 
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <i class="fas fa-calendar-check"></i> Upcoming Appointments
-        </div>
-        <div class="card-body">
-            {% if appointments %}
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Patient Name</th>
-                            <th>Appointment Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for appt in appointments %}
-                        <tr>
-                            <td>{{ appt.patient.first_name }} {{ appt.patient.last_name }}</td>
-                            <td>{{ appt.appointment_date.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>{{ appt.status }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>No upcoming appointments.</p>
-            {% endif %}
-        </div>
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-primary text-white d-flex align-items-center">
+        <i class="fas fa-calendar-check me-2"></i> <strong>Upcoming Appointments</strong>
     </div>
+    <div class="card-body">
+        {% if appointments %}
+            <table class="table table-hover table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Appointment Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for appt in appointments %}
+                    <tr>
+                        <td>
+                            {% if appt.patient %}
+                                {{ appt.patient.first_name }} {{ appt.patient.last_name }}
+                            {% else %}
+                                No patient data
+                            {% endif %}
+                        </td>
+                        
+                        <td>{{ appt.appointment_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <span class="badge {% if appt.status == 'Pending' %}bg-warning text-dark{% elif appt.status == 'Completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ appt.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('doctor_routes.reschedule_appointment', appointment_id=appt.id) }}" class="btn btn-sm btn-warning">
+                                Reschedule
+                            </a>
+                            <form method="POST" action="{{ url_for('doctor_routes.cancel_appointment', appointment_id=appt.id) }}">
+                                <button type="submit" class="btn btn-danger">Cancel Appointment</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted">No upcoming appointments.</p>
+        {% endif %}
+    </div>
+</div>
 
-    <div class="card mb-4">
-        <div class="card-header bg-success text-white">
-            <i class="fas fa-user-injured"></i> My Patients
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-success text-white d-flex align-items-center">
+            <i class="fas fa-user-injured me-2"></i> <strong>My Patients</strong>
         </div>
         <div class="card-body">
             {% if patients %}
                 <ul class="list-group">
                     {% for patient in patients %}
-                        <li class="list-group-item">
-                            {{ patient.first_name }} {{ patient.last_name }} - {{ patient.gender }}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="fas fa-user me-2"></i> {{ patient.first_name }} {{ patient.last_name }} - {{ patient.gender }}
+                            </span>
+                            <a href="{{ url_for('patient.medical_records', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary">
+                                View Details
+                            </a>
                         </li>
                     {% endfor %}
                 </ul>
             {% else %}
-                <p>No patients assigned yet.</p>
+                <p class="text-muted">No patients assigned yet.</p>
             {% endif %}
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header bg-warning text-white">
-            <i class="fas fa-file-prescription"></i> Prescriptions
-        </div>
-        <div class="card-body">
-            {% if prescriptions %}
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Medicine</th>
-                            <th>Dosage</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for prescription in prescriptions %}
-                        <tr>
-                            <td>{{ prescription.patient.first_name }} {{ prescription.patient.last_name }}</td>
-                            <td>{{ prescription.medicine_name }}</td>
-                            <td>{{ prescription.dosage }}</td>
-                            <td>{{ prescription.start_date.strftime('%Y-%m-%d') }}</td>
-                            <td>{{ prescription.end_date.strftime('%Y-%m-%d') if prescription.end_date else "Ongoing" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>No prescriptions available.</p>
-            {% endif %}
-        </div>
+<div class="card mb-4">
+    <div class="card-header bg-warning text-white">
+        <i class="fas fa-file-prescription"></i> Prescriptions
     </div>
+    <div class="card-body">
+        {% if prescriptions %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Medicine</th>
+                        <th>Dosage</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prescription in prescriptions %}
+                    <tr>
+                        <td>{{ prescription.patient.first_name }} {{ prescription.patient.last_name }}</td>
+                        <td>{{ prescription.medicine_name }}</td>
+                        <td>{{ prescription.dosage }}</td>
+                        <td>{{ prescription.date_prescribed.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ prescription.end_date.strftime('%Y-%m-%d') if prescription.end_date else "Ongoing" }}</td>
+                        <td>
+                            <a href="{{ url_for('doctor_routes.view_prescription', prescription_id=prescription.id) }}" class="btn btn-sm btn-info">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No prescriptions available.</p>
+        {% endif %}
+    </div>
+</div>
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <i class="fas fa-file-prescription"></i> Add New Prescription
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('doctor_routes.add_prescription') }}">
+        
+            <div class="mb-3">
+                <label for="patient_id" class="form-label">Patient</label>
+                <select id="patient_id" name="patient_id" class="form-select" required>
+                    <option value="">Select a Patient</option>
+                    {% for patient in patients %}
+                    <option value="{{ patient.id }}">{{ patient.first_name }} {{ patient.last_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="medicine_name" class="form-label">Medicine Name</label>
+                <input type="text" id="medicine_name" name="medicine_name" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="dosage" class="form-label">Dosage</label>
+                <input type="text" id="dosage" name="dosage" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="date_prescribed" class="form-label">Date Prescribed</label>
+                <input type="datetime-local" id="date_prescribed" name="date_prescribed" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="end_date" class="form-label">End Date (Optional)</label>
+                <input type="datetime-local" id="end_date" name="end_date" class="form-control">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Prescription</button>
+        </form>
+    </div>
+</div>
 
 </div>
 {% endblock %}

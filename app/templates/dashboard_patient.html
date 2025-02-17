@@ -22,7 +22,13 @@
                     <tbody>
                         {% for appt in appointments %}
                         <tr>
-                            <td>{{ appt.doctor.first_name }} {{ appt.doctor.last_name }}</td>
+                            <td>
+                                {% if appt.doctor %}
+                                    {{ appt.doctor.first_name }} {{ appt.doctor.last_name }}
+                                {% else %}
+                                    No doctor found
+                                {% endif %}
+                            </td>
                             <td>{{ appt.appointment_date.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td>{{ appt.status }}</td>
                         </tr>

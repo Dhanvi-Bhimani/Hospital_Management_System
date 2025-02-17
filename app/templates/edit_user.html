@@ -22,10 +22,88 @@
 
         <div class="form-group">
             {{ form.role.label }} 
-            {{ form.role(class="form-control") }}
+            {{ form.role(class="form-control", id="role-select") }}
         </div>
 
-        <button type="submit" class="btn btn-success">Update</button>
+        <div id="doctor-fields" class="role-specific" style="display: none;">
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="first_name" class="form-control" value="{{ doctor.first_name if doctor else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" name="last_name" class="form-control" value="{{ doctor.last_name if doctor else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Specialization</label>
+                <input type="text" name="specialization" class="form-control" value="{{ doctor.specialization if doctor else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="text" name="contact_number" class="form-control" value="{{ doctor.contact_number if doctor else '' }}">
+            </div>
+        </div>
+
+        <div id="patient-fields" class="role-specific" style="display: none;">
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="first_name" class="form-control" value="{{ patient.first_name if patient else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" name="last_name" class="form-control" value="{{ patient.last_name if patient else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Date of Birth</label>
+                <input type="date" name="date_of_birth" class="form-control" value="{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient and patient.date_of_birth else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Gender</label>
+                <select name="gender" class="form-control">
+                    <option value="Male" {% if patient and patient.gender == 'Male' %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if patient and patient.gender == 'Female' %}selected{% endif %}>Female</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="text" name="contact_number" class="form-control" value="{{ patient.contact_number if patient else '' }}">
+            </div>
+        </div>
+
+        <div id="staff-fields" class="role-specific" style="display: none;">
+            <div class="form-group">
+                <label>Position</label>
+                <input type="text" name="position" class="form-control" value="{{ staff.position if staff else '' }}">
+            </div>
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="text" name="contact_number" class="form-control" value="{{ staff.contact_number if staff else '' }}">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success mt-3">Update</button>
     </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const roleSelect = document.getElementById("role-select");
+    const roleFields = {
+        "2": "doctor-fields",
+        "3": "patient-fields",
+        "4": "staff-fields"
+    };
+
+    function toggleRoleFields() {
+        document.querySelectorAll(".role-specific").forEach(div => div.style.display = "none");
+        const selectedRole = roleSelect.value;
+        if (roleFields[selectedRole]) {
+            document.getElementById(roleFields[selectedRole]).style.display = "block";
+        }
+    }
+
+    roleSelect.addEventListener("change", toggleRoleFields);
+    toggleRoleFields();  
+});
+</script>
 {% endblock %}

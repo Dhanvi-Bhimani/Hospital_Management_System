@@ -9,12 +9,25 @@ from datetime import datetime
 main_routes = Blueprint('main_routes', __name__)
 admin_routes = Blueprint('admin', __name__)
 patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
+doctor_routes = Blueprint('doctor_routes', __name__)
 
 @patient_bp.route('/dashboard', methods=['GET'])
 @login_required
 def patient_dashboard():
-    appointments = Appointment.query.filter_by(patient_id=current_user.id).all()
-    return render_template('dashboard_patient.html', appointments=appointments)
+    if current_user.role.name.lower() != 'patient':
+        flash('Access denied', 'danger')
+        return redirect(url_for('main_routes.home')) 
+    patient = Patient.query.filter_by(user_id=current_user.id).first()
+
+    if not patient:
+        flash("Patient profile not found.", "danger")
+        return redirect(url_for('main_routes.home'))
+    appointments = Appointment.query.filter_by(patient_id=patient.id).all()
+    print(f"Patient ID: {patient.id}")
+    print("Appointments:")
+    for appt in appointments:
+        print(f"  ID: {appt.id}, Doctor ID: {appt.doctor_id}, Date: {appt.appointment_date}, Status: {appt.status}")
+    return render_template("dashboard_patient.html", appointments=appointments)
 
 from datetime import datetime
 
@@ -24,12 +37,13 @@ def book_appointment():
     if request.method == 'POST':
         doctor_id = request.form['doctor_id']
         appointment_date_str = request.form['appointment_date']
-
-        # Convert string to datetime object
         appointment_date = datetime.strptime(appointment_date_str, "%Y-%m-%dT%H:%M")
-
+        patient = Patient.query.filter_by(user_id=current_user.id).first()
+        if not patient:
+            flash("Patient profile not found.", "danger")
+            return redirect(url_for('patient.patient_dashboard'))
         new_appointment = Appointment(
-            patient_id=current_user.id,
+            patient_id=patient.id,  
             doctor_id=doctor_id,
             appointment_date=appointment_date
         )
@@ -40,7 +54,6 @@ def book_appointment():
     
     doctors = Doctor.query.all()  
     return render_template('book_appointment.html', doctors=doctors)
-
 
 @patient_bp.route('/medical_records', methods=['GET'])
 @login_required
@@ -71,22 +84,94 @@ def add_user():
     if form.validate_on_submit():  
         username = form.username.data
         email = form.email.data
-        password = form.password.data
-        role_id = form.role.data  
+        password = form.password.data or "default123" 
+        role_id = int(form.role.data)  
+
         if not role_id:
             flash("Please select a role.", "danger")
             return render_template('add_user.html', form=form)
 
-        existing_user = User.query.filter_by(username=username).first()
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
         if existing_user:
-            flash("Username already exists. Please choose a different one.", 'danger')
-            return redirect(url_for('admin.add_user')) 
+            flash("Username or Email already exists. Please choose a different one.", 'danger')
+            return redirect(url_for('admin.add_user'))  
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8') 
-        new_user = User(username=username, email=email, password=hashed_password, role_id=role_id)
-        db.session.add(new_user)
 
         try:
+            new_user = User(username=username, email=email, password=hashed_password, role_id=role_id)
+            db.session.add(new_user)
+            db.session.commit() 
+            if role_id == 2:  
+                first_name = request.form.get('doctor_first_name')
+                last_name = request.form.get('doctor_last_name', "")
+                specialization = request.form.get('doctor_specialization')
+                contact_number = request.form.get('doctor_contact_number')
+
+                if not first_name or not specialization:
+                    flash("Doctor requires first name and specialization!", "danger")
+                    db.session.delete(new_user)
+                    db.session.commit()
+                    return redirect(url_for('admin.add_user'))
+
+                doctor = Doctor(
+                    user_id=new_user.id,  
+                    first_name=first_name,
+                    last_name=last_name,
+                    specialization=specialization,
+                    contact_number=contact_number,
+                    email=email  
+                )
+                db.session.add(doctor)
+
+            elif role_id == 3:  
+                first_name = request.form.get('patient_first_name')
+                last_name = request.form.get('patient_last_name', "")
+                date_of_birth_str = request.form.get('patient_date_of_birth')  
+                gender = request.form.get('patient_gender')
+                contact_number = request.form.get('patient_contact_number')
+
+                if not first_name or not date_of_birth_str or not gender:
+                    flash("Patient requires first name, DOB, and gender!", "danger")
+                    db.session.delete(new_user)
+                    db.session.commit()
+                    return redirect(url_for('admin.add_user'))
+
+                try:
+                    date_of_birth = datetime.strptime(date_of_birth_str, "%Y-%m-%d").date() 
+                except ValueError:
+                    flash("Invalid date format! Use YYYY-MM-DD.", "danger")
+                    db.session.delete(new_user)
+                    db.session.commit()
+                    return redirect(url_for('admin.add_user'))
+
+                patient = Patient(
+                    user_id=new_user.id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    date_of_birth=date_of_birth, 
+                    gender=gender,
+                    contact_number=contact_number
+                )
+                db.session.add(patient)
+
+            elif role_id == 4:  
+                position = request.form.get('staff_position')
+                contact_number = request.form.get('staff_contact_number')
+
+                if not position:
+                    flash("Staff requires a position!", "danger")
+                    db.session.delete(new_user)
+                    db.session.commit()
+                    return redirect(url_for('admin.add_user'))
+
+                staff = Staff(
+                    user_id=new_user.id,  
+                    position=position,
+                    contact_number=contact_number
+                )
+                db.session.add(staff)
+                
             db.session.commit()
             flash('User added successfully!', 'success')
             return redirect(url_for('admin.manage_users'))  
@@ -97,8 +182,7 @@ def add_user():
             db.session.rollback()
             flash(f"An unexpected error occurred: {str(e)}", 'danger')
 
-    return render_template('add_user.html', form=form) 
-
+    return render_template('add_user.html', form=form)  
 
 @admin_routes.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -128,9 +212,29 @@ def delete_user(user_id):
         return redirect(url_for('main_routes.home'))
 
     user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    flash('User deleted successfully!', 'success')
+    
+    try:
+        doctor = Doctor.query.filter_by(user_id=user_id).first()
+        if doctor:
+            appointments = Appointment.query.filter_by(doctor_id=doctor.id).all()
+            for appointment in appointments:
+                db.session.delete(appointment) 
+            db.session.delete(doctor)
+        patient = Patient.query.filter_by(user_id=user_id).first()
+        if patient:
+            appointments = Appointment.query.filter_by(patient_id=patient.id).all()
+            for appointment in appointments:
+                db.session.delete(appointment)  
+            db.session.delete(patient)
+        staff = Staff.query.filter_by(user_id=user_id).first()
+        if staff:
+            db.session.delete(staff)
+        db.session.delete(user)
+        db.session.commit()
+        flash('User deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting user: {str(e)}', 'danger')
     return redirect(url_for('admin.manage_users'))
 
 @admin_routes.route('/manage_appointments')
@@ -142,7 +246,6 @@ def manage_appointments():
 
     appointments = Appointment.query.all()
     return render_template('manage_appointments.html', appointments=appointments)
-
 
 @admin_routes.route('/manage_billing')
 @login_required
@@ -174,7 +277,6 @@ def view_users():
         else:
             return redirect(url_for('home'))  
 
-    
 @main_routes.route('/')
 def home():
     return render_template('home.html')
@@ -216,12 +318,11 @@ def login(role):
         elif user.role.name.lower() == 'doctor':
             return redirect(url_for('main_routes.doctor_dashboard'))
         elif user.role.name.lower() == 'patient':
-            return redirect(url_for('main_routes.patient_dashboard'))
+            return redirect(url_for('patient.patient_dashboard'))
         elif user.role.name.lower() == 'staff':
             return redirect(url_for('main_routes.staff_dashboard'))
 
     return render_template('login.html', role=role, form=form)
-
 
 @main_routes.route('/register', methods=['GET', 'POST'])
 def register():
@@ -265,7 +366,6 @@ def logout():
     flash('You have been logged out!', 'info')
     return redirect(url_for('main_routes.home'))
 
-
 @main_routes.route('/admin_dashboard')
 @login_required
 def admin_dashboard():
@@ -279,25 +379,167 @@ def admin_dashboard():
 @login_required
 def doctor_dashboard():
     if current_user.role.name.lower() != 'doctor':
-        flash('Access denied', 'danger')
+        flash('Access denied. Only doctors can access this page.', 'danger')
         return redirect(url_for('main_routes.home'))
-    
-    appointments = Appointment.query.filter_by(doctor_id=current_user.id).all()
+
+    appointments = Appointment.query.filter_by(doctor_id=current_user.id).order_by(Appointment.appointment_date).all()
     prescriptions = Prescription.query.filter_by(doctor_id=current_user.id).all()
     patients = [appt.patient for appt in appointments]
-
     return render_template('dashboard_doctor.html', appointments=appointments, prescriptions=prescriptions, patients=patients)
 
-@main_routes.route('/patient_dashboard')
+@doctor_routes.route('/reschedule/<int:appointment_id>', methods=['GET', 'POST'])
 @login_required
-def patient_dashboard():
-    if current_user.role.name.lower() != 'patient':
-        flash('Access denied', 'danger')
+def reschedule_appointment(appointment_id):
+    if current_user.role.name.lower() != 'doctor':
+        flash('Access denied. Only doctors can reschedule appointments.', 'danger')
         return redirect(url_for('main_routes.home'))
 
-    appointments = Appointment.query.filter_by(patient_id=current_user.id).all()
+    doctor = Doctor.query.filter_by(user_id=current_user.id).first()
+    appointment = Appointment.query.get_or_404(appointment_id)
 
-    return render_template('dashboard_patient.html', appointments=appointments)
+    if appointment.doctor_id != doctor.id:
+        flash('You do not have permission to reschedule this appointment.', 'danger')
+        return redirect(url_for('main_routes.doctor_dashboard'))
+
+    if request.method == 'POST':
+        new_date = request.form.get('appointment_date')
+        if new_date:
+            appointment.appointment_date = datetime.strptime(new_date, '%Y-%m-%dT%H:%M')  
+            appointment.status = 'Rescheduled'
+            db.session.commit()
+            flash('Appointment rescheduled successfully!', 'success')
+            return redirect(url_for('main_routes.doctor_dashboard'))
+
+    return render_template('reschedule_appointment.html', appointment=appointment)
+
+@doctor_routes.route('/cancel/<int:appointment_id>', methods=['POST'])
+@login_required
+def cancel_appointment(appointment_id):
+    if current_user.role.name.lower() != 'doctor':
+        flash('Access denied. Only doctors can cancel appointments.', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    doctor = Doctor.query.filter_by(user_id=current_user.id).first()
+    appointment = Appointment.query.get_or_404(appointment_id)
+
+    if appointment.doctor_id != doctor.id:
+        flash('You do not have permission to cancel this appointment.', 'danger')
+        return redirect(url_for('main_routes.doctor_dashboard'))
+
+    appointment.status = 'Cancelled'
+    db.session.commit()
+    flash('Appointment cancelled successfully!', 'success')
+    return redirect(url_for('main_routes.doctor_dashboard'))
+
+@doctor_routes.route('/add_prescription', methods=['GET', 'POST'])
+@login_required
+def add_prescription():
+    if current_user.role.name.lower() != 'doctor':
+        flash('Access denied. Only doctors can add prescriptions.', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    doctor = Doctor.query.filter_by(user_id=current_user.id).first()
+    patients = Patient.query.all()
+
+    if request.method == 'POST':
+        patient_id = request.form.get('patient_id')
+        medicine_name = request.form.get('medicine_name')
+        dosage = request.form.get('dosage')
+
+        date_prescribed_str = request.form.get('date_prescribed')
+        if not date_prescribed_str:
+            flash('Date prescribed is required.', 'danger')
+            return redirect(request.referrer)
+
+        try:
+            date_prescribed = datetime.strptime(date_prescribed_str, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            flash('Invalid date format for "Date Prescribed".', 'danger')
+            return redirect(request.referrer)
+
+        end_date_str = request.form.get('end_date')
+        end_date = None
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash('Invalid date format for "End Date".', 'danger')
+                return redirect(request.referrer)
+
+        prescription = Prescription(
+            patient_id=patient_id,
+            doctor_id=doctor.id,
+            medicine_name=medicine_name,
+            dosage=dosage,
+            date_prescribed=date_prescribed,
+            end_date=end_date
+        )
+
+        db.session.add(prescription)
+        db.session.commit()
+        flash('Prescription added successfully!', 'success')
+        return redirect(url_for('main_routes.doctor_dashboard'))
+
+    return render_template('doctor_dashboard.html', patients=patients)
+
+@doctor_routes.route('/prescription/view/<int:prescription_id>', methods=['GET'])
+def view_prescription(prescription_id):
+    prescription = Prescription.query.get_or_404(prescription_id)
+    return render_template('view_prescription.html', prescription=prescription)
+
+from datetime import datetime
+
+@doctor_routes.route('/prescription/edit/<int:prescription_id>', methods=['GET', 'POST'])
+def edit_prescription(prescription_id):
+    prescription = Prescription.query.get_or_404(prescription_id)
+
+    if request.method == 'POST':
+        medication = request.form.get('medication')
+        dosage = request.form.get('dosage')
+        instructions = request.form.get('instructions')
+        date_prescribed_str = request.form.get('date_prescribed')
+
+        if not medication or not dosage or not date_prescribed_str:
+            flash('All fields are required!', 'danger')
+            return redirect(request.url)
+
+        try:
+            date_prescribed = datetime.strptime(date_prescribed_str, '%Y-%m-%d')
+        except ValueError:
+            flash('Invalid date format', 'danger')
+            return redirect(request.url)
+
+        prescription.medicine_name = medication
+        prescription.dosage = dosage
+        prescription.instructions = instructions
+        prescription.date_prescribed = date_prescribed
+
+        try:
+            db.session.commit()  
+            flash('Prescription updated successfully', 'success')
+            return redirect(url_for('doctor_routes.view_prescription', prescription_id=prescription.id))
+        except Exception as e:
+            db.session.rollback() 
+            flash(f'Error updating prescription: {str(e)}', 'danger')
+            return redirect(request.url)
+
+    return render_template('edit_prescription.html', prescription=prescription)
+@doctor_routes.route('/delete_prescription/<int:prescription_id>', methods=['POST'])
+@login_required
+def delete_prescription(prescription_id):
+    if current_user.role.name.lower() != 'doctor':
+        flash('Access denied. Only doctors can delete prescriptions.', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    prescription = Prescription.query.get(prescription_id)
+    if prescription:
+        db.session.delete(prescription)
+        db.session.commit()
+        flash('Prescription deleted successfully!', 'success')
+    else:
+        flash('Prescription not found.', 'danger')
+
+    return redirect(url_for('main_routes.doctor_dashboard'))
 
 @main_routes.route('/staff_dashboard')
 @login_required

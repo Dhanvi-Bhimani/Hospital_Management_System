@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edit Prescription</h2>
+
+<form method="POST">
+    <div class="form-group">
+        <label for="medication">Medication</label>
+        <input type="text" class="form-control" id="medication" name="medication" value="{{ prescription.medication }}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="dosage">Dosage</label>
+        <input type="text" class="form-control" id="dosage" name="dosage" value="{{ prescription.dosage }}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="instructions">Instructions</label>
+        <textarea class="form-control" id="instructions" name="instructions" rows="3">{{ prescription.instructions }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="date_prescribed">Date Prescribed</label>
+        <input type="date" class="form-control" id="date_prescribed" name="date_prescribed" value="{{ prescription.date_prescribed.strftime('%Y-%m-%d') }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="end_date">End Date (Optional)</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ prescription.end_date.strftime('%Y-%m-%d') if prescription.end_date else '' }}">
+    </div>
+    
+
+    <button type="submit" class="btn btn-primary">Update Prescription</button>
+</form>
+{% endblock %}
