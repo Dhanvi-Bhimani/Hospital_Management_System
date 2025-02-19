@@ -89,7 +89,7 @@ def add_user():
 
         if not role_id:
             flash("Please select a role.", "danger")
-            return render_template('add_user.html', form=form)
+            return render_template('add_user.htmlpassword', form=form)
 
         existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
         if existing_user:
@@ -381,10 +381,16 @@ def doctor_dashboard():
     if current_user.role.name.lower() != 'doctor':
         flash('Access denied. Only doctors can access this page.', 'danger')
         return redirect(url_for('main_routes.home'))
-
-    appointments = Appointment.query.filter_by(doctor_id=current_user.id).order_by(Appointment.appointment_date).all()
-    prescriptions = Prescription.query.filter_by(doctor_id=current_user.id).all()
+    doctor = Doctor.query.filter_by(user_id=current_user.id).first()
+    if not doctor:
+        flash("Doctor profile not found!", "danger")
+        return redirect(url_for('main_routes.home'))
+    # print(f"Current User ID: {current_user.id}, Associated Doctor ID: {doctor.id}")
+    appointments = Appointment.query.filter(Appointment.doctor_id == doctor.id).order_by(Appointment.appointment_date).all()
+    # print(f"Retrieved Appointments for Doctor {doctor.id}: {appointments}")
+    prescriptions = Prescription.query.filter(Prescription.doctor_id == doctor.id).all()
     patients = [appt.patient for appt in appointments]
+
     return render_template('dashboard_doctor.html', appointments=appointments, prescriptions=prescriptions, patients=patients)
 
 @doctor_routes.route('/reschedule/<int:appointment_id>', methods=['GET', 'POST'])
@@ -496,7 +502,7 @@ def edit_prescription(prescription_id):
     if request.method == 'POST':
         medication = request.form.get('medication')
         dosage = request.form.get('dosage')
-        instructions = request.form.get('instructions')
+        instructions = request.form.get('instructions', '')
         date_prescribed_str = request.form.get('date_prescribed')
 
         if not medication or not dosage or not date_prescribed_str:

@@ -120,7 +120,7 @@ class Prescription(db.Model):
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctor.id'), nullable=False)  
     medicine_name = db.Column(db.String(100), nullable=False)
     dosage = db.Column(db.String(100), nullable=False)
-    
+    instructions = db.Column(db.Text, nullable=True)    
     date_prescribed = db.Column(db.DateTime, default=datetime.utcnow)  
     end_date = db.Column(db.DateTime, nullable=True) 
     

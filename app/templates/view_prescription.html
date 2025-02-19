@@ -11,7 +11,7 @@
         <div class="card-body">
             <p><strong>Medication:</strong> {{ prescription.medicine_name }}</p>
             <p><strong>Dosage:</strong> {{ prescription.dosage }}</p>
-            <p><strong>Instructions:</strong> {{ prescription.instructions or 'N/A' }}</p>
+            <p><strong>Instructions:</strong> {{ prescription.instructions }}</p>
             <p><strong>Date Prescribed:</strong> 
                 {{ prescription.date_prescribed.strftime('%Y-%m-%d') if prescription.date_prescribed else 'N/A' }}
             </p>
