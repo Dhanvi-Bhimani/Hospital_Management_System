@@ -37,8 +37,8 @@ class Doctor(db.Model):
 
     user = db.relationship('User', back_populates='doctor_profile')
     appointments = db.relationship('Appointment', back_populates='doctor', lazy=True)
-    prescriptions = db.relationship('Prescription', back_populates='doctor', lazy=True)  # Add this line
-
+    prescriptions = db.relationship('Prescription', back_populates='doctor', lazy=True)  
+    medical_records = db.relationship('MedicalRecord', back_populates='doctor', lazy=True)
 
 # Patient Model
 class Patient(db.Model):
@@ -85,11 +85,14 @@ class MedicalRecord(db.Model):
     __tablename__ = 'medical_record'
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctor.id'), nullable=False)
     record_type = db.Column(db.String(100), nullable=False)
     record_date = db.Column(db.DateTime, default=datetime.utcnow)
+    treatment_plan = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=True)
 
     patient = db.relationship('Patient', back_populates='medical_records')
+    doctor = db.relationship('Doctor', back_populates='medical_records')
 
 # Billing Model
 class Billing(db.Model):
