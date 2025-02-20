@@ -395,7 +395,7 @@ def doctor_dashboard():
     todays_appointments = [appt for appt in appointments if appt.appointment_date.date() == today]
 
     prescriptions = Prescription.query.filter_by(doctor_id=doctor.id).all()
-    patients = [appt.patient for appt in appointments]
+    patients = list({appt.patient for appt in appointments})
 
     return render_template(
         'dashboard_doctor.html',
