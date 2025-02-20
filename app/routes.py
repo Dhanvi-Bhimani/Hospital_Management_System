@@ -381,16 +381,53 @@ def doctor_dashboard():
     if current_user.role.name.lower() != 'doctor':
         flash('Access denied. Only doctors can access this page.', 'danger')
         return redirect(url_for('main_routes.home'))
+
     doctor = Doctor.query.filter_by(user_id=current_user.id).first()
     if not doctor:
         flash("Doctor profile not found!", "danger")
         return redirect(url_for('main_routes.home'))
-    # print(f"Current User ID: {current_user.id}, Associated Doctor ID: {doctor.id}")
-    appointments = Appointment.query.filter(Appointment.doctor_id == doctor.id).order_by(Appointment.appointment_date).all()
-    # print(f"Retrieved Appointments for Doctor {doctor.id}: {appointments}")
-    prescriptions = Prescription.query.filter(Prescription.doctor_id == doctor.id).all()
-    patients = list({appt.patient for appt in appointments})  
-    return render_template('dashboard_doctor.html', appointments=appointments, prescriptions=prescriptions, patients=patients)
+
+    # Get all appointments
+    appointments = Appointment.query.filter_by(doctor_id=doctor.id).order_by(Appointment.appointment_date).all()
+    
+    # Get today's appointments
+    today = datetime.today().date()
+    todays_appointments = [appt for appt in appointments if appt.appointment_date.date() == today]
+
+    prescriptions = Prescription.query.filter_by(doctor_id=doctor.id).all()
+    patients = [appt.patient for appt in appointments]
+
+    return render_template(
+        'dashboard_doctor.html',
+        doctor=doctor,
+        appointments=appointments,
+        todays_appointments=todays_appointments,
+        prescriptions=prescriptions,
+        patients=patients
+    )
+@doctor_routes.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    if current_user.role.name.lower() != 'doctor':
+        flash('Access denied. Only doctors can update profiles.', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    doctor = Doctor.query.filter_by(user_id=current_user.id).first()
+    if not doctor:
+        flash('Doctor profile not found.', 'danger')
+        return redirect(url_for('main_routes.doctor_dashboard'))
+
+    # Get updated details from form
+    doctor.first_name = request.form.get('first_name')
+    doctor.last_name = request.form.get('last_name')
+    doctor.specialization = request.form.get('specialization')
+    doctor.contact_number = request.form.get('contact_number')
+    doctor.email = request.form.get('email')
+
+    # Commit changes
+    db.session.commit()
+    flash('Profile updated successfully!', 'success')
+    return redirect(url_for('main_routes.doctor_dashboard'))
 
 @doctor_routes.route('/reschedule/<int:appointment_id>', methods=['GET', 'POST'])
 @login_required
