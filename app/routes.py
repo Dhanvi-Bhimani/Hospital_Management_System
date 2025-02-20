@@ -346,13 +346,34 @@ def register():
         db.session.commit()
         
         if role.name.lower() == "doctor":
-            new_doctor = Doctor(user_id=new_user.id, first_name=new_user.username, last_name="", email=new_user.email, specialization="General")
+            new_doctor = Doctor(
+                user_id=new_user.id,
+                first_name=request.form.get('doctor_first_name', new_user.username),
+                last_name=request.form.get('doctor_last_name', ""),
+                email=new_user.email,
+                specialization=request.form.get('doctor_specialization', "General"),
+                contact_number=request.form.get('doctor_contact_number', "")
+            )
             db.session.add(new_doctor)
+
         elif role.name.lower() == "patient":
-            new_patient = Patient(user_id=new_user.id, first_name=new_user.username, last_name="", date_of_birth=datetime.utcnow(), gender="Other", medical_history="None")
+            new_patient = Patient(
+                user_id=new_user.id,
+                first_name=request.form.get('patient_first_name', new_user.username),
+                last_name=request.form.get('patient_last_name', ""),
+                date_of_birth=datetime.strptime(request.form.get('patient_date_of_birth', '2000-01-01'), '%Y-%m-%d'),
+                gender=request.form.get('patient_gender', "Other"),
+                contact_number=request.form.get('patient_contact_number', ""),
+                medical_history="None"
+            )
             db.session.add(new_patient)
+
         elif role.name.lower() == "staff":
-            new_staff = Staff(user_id=new_user.id, position="Receptionist", contact_number="")
+            new_staff = Staff(
+                user_id=new_user.id,
+                position=request.form.get('staff_position', "Receptionist"),
+                contact_number=request.form.get('staff_contact_number', "")
+            )
             db.session.add(new_staff)
 
         db.session.commit()
@@ -598,10 +619,13 @@ def add_medical_record(patient_id):
         record_type = request.form['record_type']
         treatment_plan = request.form['treatment_plan']
         description = request.form.get('description', '')
+        record_date_str = request.form['record_date']
+        record_date = datetime.strptime(record_date_str, "%Y-%m-%d")
 
         new_record = MedicalRecord(
             patient_id=patient.id,
-            doctor_id=doctor.id,  # Assuming the logged-in user is a doctor
+            doctor_id=doctor.id,
+            record_date=record_date,
             record_type=record_type,
             treatment_plan=treatment_plan,
             description=description

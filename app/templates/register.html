@@ -25,11 +25,88 @@
                 </div>
                 <div class="form-group">
                     <label for="role">Role:</label>
-                    {{ form.role(class="form-control") }}
+                    {{ form.role(class="form-control", id="role-select") }}
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Register</button>
+
+                <div id="doctor-fields" class="role-specific" style="display: none;">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="doctor_first_name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="doctor_last_name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Specialization</label>
+                        <input type="text" name="doctor_specialization" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Number</label>
+                        <input type="text" name="doctor_contact_number" class="form-control">
+                    </div>
+                </div>
+
+                <div id="patient-fields" class="role-specific" style="display: none;">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="patient_first_name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="patient_last_name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" name="patient_date_of_birth" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select name="patient_gender" class="form-control">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Number</label>
+                        <input type="text" name="patient_contact_number" class="form-control">
+                    </div>
+                </div>
+
+                <div id="staff-fields" class="role-specific" style="display: none;">
+                    <div class="form-group">
+                        <label>Position</label>
+                        <input type="text" name="staff_position" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Number</label>
+                        <input type="text" name="staff_contact_number" class="form-control">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block mt-3">Register</button>
             </form>
         </div>
     </div>
 </div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const roleSelect = document.getElementById("role-select");
+    const roleFields = {
+        "2": "doctor-fields",
+        "3": "patient-fields",
+        "4": "staff-fields"
+    };
+    function toggleRoleFields() {
+        document.querySelectorAll(".role-specific").forEach(div => div.style.display = "none");
+        const selectedRole = roleSelect.value;
+        if (roleFields[selectedRole]) {
+            document.getElementById(roleFields[selectedRole]).style.display = "block";
+        }
+    }
+    roleSelect.addEventListener("change", toggleRoleFields);
+    toggleRoleFields(); 
+});
+</script>
+
 {% endblock %}
