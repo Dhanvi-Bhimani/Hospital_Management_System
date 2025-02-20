@@ -31,14 +31,38 @@
                         <a class="nav-link" href="/contact"><i class="fas fa-envelope"></i> Contact Us</a>
                     </li>
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link text-danger" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/role-selection"><i class="fas fa-sign-in-alt"></i> Login</a>
-                        </li>
-                    {% endif %}
+                    <li class="nav-item">
+                        {% if current_user.role.name.lower() == "admin" %}
+                            <a class="nav-link" href="{{ url_for('main_routes.admin_dashboard') }}">
+                                <i class="fas fa-user-shield"></i> Admin Dashboard
+                            </a>
+                        {% elif current_user.role.name.lower() == "doctor" %}
+                            <a class="nav-link" href="{{ url_for('main_routes.doctor_dashboard') }}">
+                                <i class="fas fa-user-md"></i> Doctor Dashboard
+                            </a>
+                        {% elif current_user.role.name.lower() == "patient" %}
+                            <a class="nav-link" href="{{ url_for('patient.patient_dashboard') }}">
+                                <i class="fas fa-procedures"></i> Patient Dashboard
+                            </a>
+                        {% elif current_user.role.name.lower() == "staff" %}
+                            <a class="nav-link" href="{{ url_for('main_routes.staff_dashboard') }}">
+                                <i class="fas fa-user-nurse"></i> Staff Dashboard
+                            </a>
+                        {% endif %}
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-danger" href="{{ url_for('main_routes.logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main_routes.role_selection') }}">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    </li>
+                {% endif %}
+                
                 </ul>
             </div>
         </div>
