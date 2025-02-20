@@ -389,8 +389,7 @@ def doctor_dashboard():
     appointments = Appointment.query.filter(Appointment.doctor_id == doctor.id).order_by(Appointment.appointment_date).all()
     # print(f"Retrieved Appointments for Doctor {doctor.id}: {appointments}")
     prescriptions = Prescription.query.filter(Prescription.doctor_id == doctor.id).all()
-    patients = [appt.patient for appt in appointments]
-
+    patients = list({appt.patient for appt in appointments})  
     return render_template('dashboard_doctor.html', appointments=appointments, prescriptions=prescriptions, patients=patients)
 
 @doctor_routes.route('/reschedule/<int:appointment_id>', methods=['GET', 'POST'])
