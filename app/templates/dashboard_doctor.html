@@ -155,9 +155,17 @@
                             <span>
                                 <i class="fas fa-user me-2"></i> {{ patient.first_name }} {{ patient.last_name }} - {{ patient.gender }}
                             </span>
-                            <a href="{{ url_for('patient.medical_records', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary">
+                            <a href="{{ url_for('doctor_routes.medical_records', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary">
                                 View Details
                             </a>
+                            {% if patient %}
+                                <a href="{{ url_for('doctor_routes.add_medical_record', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary">
+                                    Add Records
+                                </a>
+                            {% else %}
+                                <span class="text-danger">Invalid Patient</span>
+                            {% endif %}
+
                         </li>
                     {% endfor %}
                 </ul>

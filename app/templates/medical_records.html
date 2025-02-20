@@ -9,17 +9,32 @@
         <table class="table table-bordered">
             <thead>
                 <tr>
+                    <th>Patient Name</th>
+                    <th>Doctor Name</th>
                     <th>Record Type</th>
                     <th>Date</th>
                     <th>Description</th>
+                    {% if current_user.role.name == 'Doctor'%}
+                        <th>Actions</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for record in records %}
                 <tr>
+                    <td>{{ record.patient.first_name }} {{ record.patient.last_name }}</td>
+                    <td>{{ record.doctor.first_name }} {{ record.doctor.last_name }}</td>
                     <td>{{ record.record_type }}</td>
                     <td>{{ record.record_date.strftime('%Y-%m-%d') }}</td>
                     <td>{{ record.description }}</td>
+                    {% if current_user.role.name == 'Doctor' and record.doctor.user_id == current_user.id %}
+                    <td>
+                        <a href="{{ url_for('doctor_routes.update_medical_record', medical_record_id=record.id) }}" class="btn btn-warning btn-sm">Update</a>
+                        <form method="POST" action="{{ url_for('doctor_routes.delete_medical_record', medical_record_id=record.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?')">Delete</button>
+                        </form>
+                    </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
