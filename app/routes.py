@@ -27,7 +27,7 @@ def patient_dashboard():
     print("Appointments:")
     for appt in appointments:
         print(f"  ID: {appt.id}, Doctor ID: {appt.doctor_id}, Date: {appt.appointment_date}, Status: {appt.status}")
-    return render_template("dashboard_patient.html", appointments=appointments)
+    return render_template("dashboard_patient.html", appointments=appointments, patient=patient)
 
 from datetime import datetime
 
@@ -57,9 +57,12 @@ def book_appointment():
 
 @patient_bp.route('/medical_records', methods=['GET'])
 @login_required
-def medical_records():
-    records = MedicalRecord.query.filter_by(patient_id=current_user.id).all()
-    return render_template('medical_records.html', records=records)
+def medical_records_patient():
+    patient = Patient.query.filter_by(user_id=current_user.id).first()
+    records = MedicalRecord.query.filter_by(patient_id=patient.id).all()
+    return render_template('medical_records.html',  patient=patient, records=records)
+
+
 
 @admin_routes.route('/manage_users')
 @login_required
@@ -381,17 +384,54 @@ def doctor_dashboard():
     if current_user.role.name.lower() != 'doctor':
         flash('Access denied. Only doctors can access this page.', 'danger')
         return redirect(url_for('main_routes.home'))
+
     doctor = Doctor.query.filter_by(user_id=current_user.id).first()
     if not doctor:
         flash("Doctor profile not found!", "danger")
         return redirect(url_for('main_routes.home'))
-    # print(f"Current User ID: {current_user.id}, Associated Doctor ID: {doctor.id}")
-    appointments = Appointment.query.filter(Appointment.doctor_id == doctor.id).order_by(Appointment.appointment_date).all()
-    # print(f"Retrieved Appointments for Doctor {doctor.id}: {appointments}")
-    prescriptions = Prescription.query.filter(Prescription.doctor_id == doctor.id).all()
-    patients = [appt.patient for appt in appointments]
 
-    return render_template('dashboard_doctor.html', appointments=appointments, prescriptions=prescriptions, patients=patients)
+    # Get all appointments
+    appointments = Appointment.query.filter_by(doctor_id=doctor.id).order_by(Appointment.appointment_date).all()
+    
+    # Get today's appointments
+    today = datetime.today().date()
+    todays_appointments = [appt for appt in appointments if appt.appointment_date.date() == today]
+
+    prescriptions = Prescription.query.filter_by(doctor_id=doctor.id).all()
+    patients = list({appt.patient for appt in appointments})
+
+    return render_template(
+        'dashboard_doctor.html',
+        doctor=doctor,
+        appointments=appointments,
+        todays_appointments=todays_appointments,
+        prescriptions=prescriptions,
+        patients=patients
+    )
+
+@doctor_routes.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    if current_user.role.name.lower() != 'doctor':
+        flash('Access denied. Only doctors can update profiles.', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    doctor = Doctor.query.filter_by(user_id=current_user.id).first()
+    if not doctor:
+        flash('Doctor profile not found.', 'danger')
+        return redirect(url_for('main_routes.doctor_dashboard'))
+
+    # Get updated details from form
+    doctor.first_name = request.form.get('first_name')
+    doctor.last_name = request.form.get('last_name')
+    doctor.specialization = request.form.get('specialization')
+    doctor.contact_number = request.form.get('contact_number')
+    doctor.email = request.form.get('email')
+
+    # Commit changes
+    db.session.commit()
+    flash('Profile updated successfully!', 'success')
+    return redirect(url_for('main_routes.doctor_dashboard'))
 
 @doctor_routes.route('/reschedule/<int:appointment_id>', methods=['GET', 'POST'])
 @login_required
@@ -546,6 +586,84 @@ def delete_prescription(prescription_id):
         flash('Prescription not found.', 'danger')
 
     return redirect(url_for('main_routes.doctor_dashboard'))
+
+@doctor_routes.route('/add_medical_record/<int:patient_id>', methods=['GET', 'POST'])
+@login_required
+def add_medical_record(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    doctor = Doctor.query.filter_by(user_id=current_user.id).first()
+
+    
+    if request.method == 'POST':
+        record_type = request.form['record_type']
+        treatment_plan = request.form['treatment_plan']
+        description = request.form.get('description', '')
+
+        new_record = MedicalRecord(
+            patient_id=patient.id,
+            doctor_id=doctor.id,  # Assuming the logged-in user is a doctor
+            record_type=record_type,
+            treatment_plan=treatment_plan,
+            description=description
+        )
+
+        db.session.add(new_record)
+        db.session.commit()
+        flash('Medical record added successfully!', 'success')
+        return redirect(url_for('main_routes.doctor_dashboard'))
+
+    return render_template('add_medical_record.html', patient=patient)
+
+@doctor_routes.route('/medical_records/<int:patient_id>')
+@login_required
+def medical_records(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    
+    
+
+    # Fetch only the records for this specific patient
+    records = MedicalRecord.query.filter_by(patient_id=patient.id).all()
+
+    return render_template("medical_records.html", patient=patient, records=records)
+
+@doctor_routes.route('/update_medical_record/<int:medical_record_id>', methods=['GET', 'POST'])
+@login_required
+def update_medical_record(medical_record_id):
+    record = MedicalRecord.query.get_or_404(medical_record_id)
+
+    # Ensure only the doctor who created the record can edit it
+    if current_user.role.name.lower() != 'doctor' or record.doctor.user_id != current_user.id:
+        flash("Unauthorized access!", "danger")
+        return redirect(url_for('doctor_routes.medical_records', patient_id=record.patient_id))
+
+    if request.method == 'POST':
+        record.record_type = request.form['record_type']
+        record.treatment_plan = request.form['treatment_plan']
+        record.description = request.form.get('description', '')
+
+        db.session.commit()
+        flash('Medical record updated successfully!', 'success')
+        return redirect(url_for('doctor_routes.medical_records', patient_id=record.patient_id))
+
+    return render_template("update_medical_record.html", record=record)
+
+
+@doctor_routes.route('/delete_medical_record/<int:medical_record_id>', methods=['POST'])
+@login_required
+def delete_medical_record(medical_record_id):
+    record = MedicalRecord.query.get_or_404(medical_record_id)
+
+    # Ensure only the doctor who created the record or an admin can delete it
+    if current_user.role.name.lower() != 'doctor' or record.doctor.user_id != current_user.id:
+        flash("Unauthorized action!", "danger")
+        return redirect(url_for('doctor_routes.medical_records', patient_id=record.patient_id))
+
+    db.session.delete(record)
+    db.session.commit()
+    flash('Medical record deleted successfully!', 'success')
+
+    return redirect(url_for('doctor_routes.medical_records', patient_id=record.patient_id))
+
 
 @main_routes.route('/staff_dashboard')
 @login_required
