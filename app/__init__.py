@@ -4,6 +4,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_session import Session
+from flask import url_for, redirect
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -38,3 +39,7 @@ from .models import User
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return redirect(url_for("main_routes.login", role="admin")) 
