@@ -51,6 +51,46 @@
     </div>
 
     <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fas fa-prescription"></i> My Prescriptions
+    </div>
+    <div class="card-body">
+        {% if prescriptions %}
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Doctor</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prescription in prescriptions %}
+                    <tr>
+                        <td>
+                            {% if prescription.doctor %}
+                                {{ prescription.doctor.first_name }} {{ prescription.doctor.last_name }}
+                            {% else %}
+                                No doctor assigned
+                            {% endif %}
+                        </td>
+                        <td>{{ prescription.date_prescribed.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <a href="{{ url_for('patient.view_prescription_patient', prescription_id=prescription.id) }}" class="btn btn-info btn-sm">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No prescriptions available.</p>
+        {% endif %}
+    </div>
+</div>
+
+    <div class="card mb-4">
         <div class="card-header bg-warning text-white">
             <i class="fas fa-calendar-plus"></i> Book Appointment
         </div>
