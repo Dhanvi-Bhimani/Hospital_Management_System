@@ -23,11 +23,13 @@ def patient_dashboard():
         flash("Patient profile not found.", "danger")
         return redirect(url_for('main_routes.home'))
     appointments = Appointment.query.filter_by(patient_id=patient.id).all()
+    prescriptions = Prescription.query.filter_by(patient_id=patient.id).all()
     print(f"Patient ID: {patient.id}")
     print("Appointments:")
+    print("Prescriptions:", prescriptions)
     for appt in appointments:
         print(f"  ID: {appt.id}, Doctor ID: {appt.doctor_id}, Date: {appt.appointment_date}, Status: {appt.status}")
-    return render_template("dashboard_patient.html", appointments=appointments, patient=patient)
+    return render_template("dashboard_patient.html", appointments=appointments, patient=patient, prescriptions=prescriptions)
 
 from datetime import datetime
 
@@ -247,8 +249,38 @@ def manage_appointments():
         flash('Access denied', 'danger')
         return redirect(url_for('main_routes.home'))
 
-    appointments = Appointment.query.all()
+    appointments = db.session.query(
+        Appointment.id.label('id'),
+        Appointment.appointment_date.label('appointment_date'),
+        Appointment.status.label('status'),
+        Patient.first_name.label('patient_name'),
+        Doctor.first_name.label('doctor_name')
+    ).join(Patient, Patient.id == Appointment.patient_id) \
+     .join(Doctor, Doctor.id == Appointment.doctor_id) \
+     .all()
+     
+    print(url_for('admin.manage_appointments'))
+
     return render_template('manage_appointments.html', appointments=appointments)
+
+@admin_routes.route('/delete_appointment/<int:appointment_id>', methods=['POST'])
+@login_required
+def delete_appointment(appointment_id):
+    if current_user.role.name.lower() != 'admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    appointment = Appointment.query.get_or_404(appointment_id)
+
+    try:
+        db.session.delete(appointment)
+        db.session.commit()
+        flash('Appointment deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting appointment: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.manage_appointments'))
 
 @admin_routes.route('/manage_billing')
 @login_required
@@ -498,6 +530,15 @@ def cancel_appointment(appointment_id):
     flash('Appointment cancelled successfully!', 'success')
     return redirect(url_for('main_routes.doctor_dashboard'))
 
+@doctor_routes.route('/appointment/complete/<int:appointment_id>', methods=['POST'])
+@login_required
+def complete_appointment(appointment_id):
+    appointment = Appointment.query.get_or_404(appointment_id)
+    appointment.status = 'Completed'
+    db.session.commit()
+    flash('Appointment marked as completed.', 'success')
+    return redirect(url_for('main_routes.doctor_dashboard'))
+
 @doctor_routes.route('/add_prescription', methods=['GET', 'POST'])
 @login_required
 def add_prescription():
@@ -552,6 +593,21 @@ def add_prescription():
 @doctor_routes.route('/prescription/view/<int:prescription_id>', methods=['GET'])
 def view_prescription(prescription_id):
     prescription = Prescription.query.get_or_404(prescription_id)
+    return render_template('view_prescription.html', prescription=prescription)
+
+@patient_bp.route('/prescription/view/<int:prescription_id>', methods=['GET'])
+@login_required
+def view_prescription_patient(prescription_id):
+    prescription = Prescription.query.get_or_404(prescription_id)
+
+    # Get the patient linked to the logged-in user
+    patient = Patient.query.filter_by(user_id=current_user.id).first()
+
+    # Ensure patient exists and that the prescription belongs to the logged-in patient
+    if not patient or prescription.patient_id != patient.id:
+        flash("You are not authorized to view this prescription.", "danger")
+        return redirect(url_for('patient.patient_dashboard'))
+
     return render_template('view_prescription.html', prescription=prescription)
 
 from datetime import datetime
