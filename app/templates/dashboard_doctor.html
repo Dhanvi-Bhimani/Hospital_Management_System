@@ -132,6 +132,9 @@
                             <form method="POST" action="{{ url_for('doctor_routes.cancel_appointment', appointment_id=appt.id) }}">
                                 <button type="submit" class="btn btn-danger">Cancel Appointment</button>
                             </form>
+                            <form method="POST" action="{{ url_for('doctor_routes.complete_appointment', appointment_id=appt.id) }}">
+                                <button type="submit" class="btn btn-sm btn-success">Mark Completed</button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
