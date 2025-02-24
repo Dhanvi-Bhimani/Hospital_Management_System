@@ -591,6 +591,7 @@ def add_prescription():
     return render_template('doctor_dashboard.html', patients=patients)
 
 @doctor_routes.route('/prescription/view/<int:prescription_id>', methods=['GET'])
+@login_required
 def view_prescription(prescription_id):
     prescription = Prescription.query.get_or_404(prescription_id)
     return render_template('view_prescription.html', prescription=prescription)
@@ -613,9 +614,13 @@ def view_prescription_patient(prescription_id):
 from datetime import datetime
 
 @doctor_routes.route('/prescription/edit/<int:prescription_id>', methods=['GET', 'POST'])
+@login_required
 def edit_prescription(prescription_id):
     prescription = Prescription.query.get_or_404(prescription_id)
-
+    if current_user.role not in ['doctor', 'admin']:
+        flash("You are not authorized to edit this prescription.", "danger")
+        return redirect(url_for('patient.patient_dashboard'))
+    
     if request.method == 'POST':
         medication = request.form.get('medication')
         dosage = request.form.get('dosage')

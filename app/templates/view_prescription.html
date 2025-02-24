@@ -20,7 +20,7 @@
             </p>
 
             <div class="mt-3">
-                {% if current_user.role == 'doctor' or current_user.role == 'admin' %}
+                {% if current_user.role.name == 'Doctor' or current_user.role.name == 'Admin' %}
 
                 <a href="{{ url_for('doctor_routes.edit_prescription', prescription_id=prescription.id) }}" class="btn btn-warning">Edit</a>
                 
