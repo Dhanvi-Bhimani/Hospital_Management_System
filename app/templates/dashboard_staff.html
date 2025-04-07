@@ -5,6 +5,7 @@
     <h1 class="mt-4">Staff Dashboard</h1>
     <hr>
 
+    <!-- Patient Check-ins -->
     <div class="card mb-4">
         <div class="card-header bg-info text-white">
             <i class="fas fa-hospital-user"></i> Patient Check-ins
@@ -14,21 +15,13 @@
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header bg-warning text-white">
-            <i class="fas fa-file-invoice-dollar"></i> Billing
-        </div>
-        <div class="card-body">
-            <a href="{{ url_for('staff.billing') }}" class="btn btn-primary">View Billing</a>
-        </div>
-    </div>
-
+    <!-- Manage Inventory -->
     <div class="card mb-4">
         <div class="card-header bg-success text-white">
             <i class="fas fa-capsules"></i> Manage Inventory
         </div>
         <div class="card-body">
-            <a href="{{ url_for('staff.inventory') }}" class="btn btn-primary">View Inventory</a>
+            <a href="{{ url_for('pharmacy.view_inventory') }}" class="btn btn-primary">View Inventory</a>
         </div>
     </div>
 

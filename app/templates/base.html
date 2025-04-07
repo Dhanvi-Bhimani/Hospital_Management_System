@@ -45,7 +45,7 @@
                                 <i class="fas fa-procedures"></i> Patient Dashboard
                             </a>
                         {% elif current_user.role.name.lower() == "staff" %}
-                            <a class="nav-link" href="{{ url_for('main_routes.staff_dashboard') }}">
+                            <a class="nav-link" href="{{ url_for('staff.staff_dashboard') }}">
                                 <i class="fas fa-user-nurse"></i> Staff Dashboard
                             </a>
                         {% endif %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2 class="my-4">Make a Payment</h2>
+    <form method="POST" action="{{ url_for('patient.make_payment') }}">
+        <div class="form-group">
+            <label for="amount">Amount (USD):</label>
+            <input type="text" class="form-control" id="amount" name="amount" required>
+        </div>
+
+        <div class="form-group">
+            <label for="category">Payment For:</label>
+            <select class="form-control" id="category" name="category" required>
+                <option value="Doctor Fees">Doctor Fees</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Laboratory">Laboratory</option>
+                <option value="Radiology">Radiology</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="payment_method">Payment Method:</label>
+            <select class="form-control" id="payment_method" name="payment_method" required>
+                <option value="Cash">Cash</option>
+                <option value="Card">Card</option>
+                <option value="UPI">UPI</option>
+                <option value="Net Banking">Net Banking</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Make Payment</button>
+        <a href="{{ url_for('patient.patient_dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

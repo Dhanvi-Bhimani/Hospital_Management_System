@@ -98,5 +98,43 @@
             <a href="{{ url_for('patient.book_appointment') }}" class="btn btn-primary">Book a New Appointment</a>
         </div>
     </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-money-bill-wave"></i> My Payments
+        </div>
+        <div class="card-body">
+            {% if payments %}
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Payment ID</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.id }}</td>
+                            <td>${{ payment.amount }}</td>
+                            <td>{{ payment.payment_method }}</td>
+                            <td>{{ payment.payment_status }}</td>
+                            <td>{{ payment.payment_date.strftime('%Y-%m-%d') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No payments found.</p>
+            {% endif %}
+        </div>
+
+        <a href="{{ url_for('patient.make_payment') }}" class="btn btn-success">Make a Payment</a>
+
+    </div>
+
 </div>
 {% endblock %}

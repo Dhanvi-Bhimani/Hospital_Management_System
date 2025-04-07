@@ -1,15 +1,92 @@
-from flask import Blueprint, render_template, flash, redirect, request, url_for
+from flask import Blueprint, render_template, flash, redirect, request, url_for, Response
 from flask_login import login_user, login_required, logout_user, current_user
 from psycopg2 import IntegrityError
-from werkzeug.security import generate_password_hash, check_password_hash
 from .forms import LoginForm, RegistrationForm, UserForm
-from .models import User, db, Role, Appointment, Prescription, Payment, MedicalRecord, Doctor, Patient, Staff
+from .models import User, db, Role, Appointment, Prescription, Payment, MedicalRecord, Doctor, Patient, Staff, Pharmacy
 from . import bcrypt 
+import uuid
+import csv, io
 from datetime import datetime
 main_routes = Blueprint('main_routes', __name__)
 admin_routes = Blueprint('admin', __name__)
 patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
 doctor_routes = Blueprint('doctor_routes', __name__)
+staff_bp = Blueprint("staff", __name__, url_prefix="/staff")
+pharmacy = Blueprint('pharmacy', __name__)
+
+@pharmacy.route('/inventory')
+def view_inventory():
+    # Query the database for all medicines (from the Pharmacy table)
+    medicines = Pharmacy.query.all()
+    return render_template('view_inventory.html', medicines=medicines)
+
+@pharmacy.route('/view_medicine/<int:medicine_id>', methods=['GET'])
+def view_medicine(medicine_id):
+    # Logic to fetch and display the medicine details using medicine_id
+    medicine = Pharmacy.query.get(medicine_id)
+    return render_template('view_medicine.html', medicine=medicine)
+
+@pharmacy.route('/edit_medicine/<int:medicine_id>', methods=['GET', 'POST'])
+def edit_medicine(medicine_id):
+    # Logic to fetch and edit medicine details using medicine_id
+    medicine = Pharmacy.query.get(medicine_id)
+    if request.method == 'POST':
+        # Process form submission and update the medicine
+        medicine.name = request.form['name']
+        medicine.stock_quantity = request.form['stock_quantity']
+        db.session.commit()
+        return redirect(url_for('pharmacy.view_inventory'))
+    return render_template('edit_medicine.html', medicine=medicine)
+
+@pharmacy.route('/delete_medicine/<int:medicine_id>', methods=['POST'])
+def delete_medicine(medicine_id):
+    # Logic to delete medicine by id
+    medicine = Pharmacy.query.get(medicine_id)
+    if medicine:
+        db.session.delete(medicine)
+        db.session.commit()
+    return redirect(url_for('pharmacy.view_inventory'))
+
+
+@pharmacy.route('/add_medicine', methods=['GET', 'POST'])
+def add_medicine():
+    if request.method == 'POST':
+        medicine_name = request.form.get('medicine_name')
+        stock_quantity = request.form.get('stock_quantity')
+        price_per_unit = request.form.get('price_per_unit')
+        expiry_date_str = request.form.get('expiry_date')
+
+        # Convert the expiry date string to a date object
+        expiry_date = datetime.strptime(expiry_date_str, '%Y-%m-%d').date()
+
+        # Create a new medicine entry
+        new_medicine = Pharmacy(
+            medicine_name=medicine_name,
+            stock_quantity=stock_quantity,
+            price_per_unit=price_per_unit,
+            expiry_date=expiry_date
+        )
+
+        # Add the new medicine to the database
+        db.session.add(new_medicine)
+        db.session.commit()
+
+        # Redirect to the inventory page
+        return redirect(url_for('pharmacy.view_inventory'))
+
+    return render_template('add_medicine.html')
+@staff_bp.route("/dashboard")
+def staff_dashboard():
+    total_patients = Patient.query.count()
+    total_medicines = Pharmacy.query.count()
+
+    return render_template("dashboard_staff.html", 
+                           total_patients=total_patients, 
+                           total_medicines=total_medicines)
+
+@staff_bp.route("/check-in")
+def check_in():
+    return "Check-in management coming soon!"
 
 @patient_bp.route('/dashboard', methods=['GET'])
 @login_required
@@ -18,6 +95,7 @@ def patient_dashboard():
         flash('Access denied', 'danger')
         return redirect(url_for('main_routes.home')) 
     patient = Patient.query.filter_by(user_id=current_user.id).first()
+    payments = Payment.query.filter_by(patient_id=current_user.id).all()
 
     if not patient:
         flash("Patient profile not found.", "danger")
@@ -29,9 +107,50 @@ def patient_dashboard():
     print("Prescriptions:", prescriptions)
     for appt in appointments:
         print(f"  ID: {appt.id}, Doctor ID: {appt.doctor_id}, Date: {appt.appointment_date}, Status: {appt.status}")
-    return render_template("dashboard_patient.html", appointments=appointments, patient=patient, prescriptions=prescriptions)
+    return render_template("dashboard_patient.html", appointments=appointments, patient=patient, prescriptions=prescriptions, payments=payments)
 
-from datetime import datetime
+@patient_bp.route('/make_payment', methods=['GET', 'POST'])
+@login_required
+def make_payment():
+    if request.method == 'POST':
+        try:
+            amount = request.form.get('amount')
+            payment_method = request.form.get('payment_method')
+            category = request.form.get('category')
+
+            if not amount or not payment_method or not category:
+                flash('All fields are required!', 'danger')
+                return redirect(url_for('patient.make_payment'))
+
+            try:
+                amount = float(amount)
+                if amount <= 0:
+                    flash('Invalid amount. Please enter a positive value.', 'danger')
+                    return redirect(url_for('patient.make_payment'))
+            except ValueError:
+                flash('Invalid amount. Please enter a valid number.', 'danger')
+                return redirect(url_for('patient.make_payment'))
+
+            new_payment = Payment(
+                patient_id=current_user.id,
+                amount=amount,
+                payment_method=payment_method,
+                payment_status='Pending',
+                payment_date=datetime.now(),
+                category=category
+            )
+            db.session.add(new_payment)
+            db.session.commit()
+
+            flash('Payment initiated successfully! Please wait for confirmation.', 'success')
+            return redirect(url_for('patient.patient_dashboard'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+            return redirect(url_for('patient.make_payment'))
+
+    return render_template('make_payment.html')
 
 @patient_bp.route('/appointments/book', methods=['GET', 'POST'])
 @login_required
@@ -63,8 +182,6 @@ def medical_records_patient():
     patient = Patient.query.filter_by(user_id=current_user.id).first()
     records = MedicalRecord.query.filter_by(patient_id=patient.id).all()
     return render_template('medical_records.html',  patient=patient, records=records)
-
-
 
 @admin_routes.route('/manage_users')
 @login_required
@@ -282,15 +399,188 @@ def delete_appointment(appointment_id):
 
     return redirect(url_for('admin.manage_appointments'))
 
-@admin_routes.route('/manage_billing')
+@admin_routes.route('/manage_billing', methods=['GET'])
 @login_required
 def manage_billing():
+    status = request.args.get('status')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    query = Payment.query
+
+    if status:
+        query = query.filter(Payment.payment_status == status)
+    if start_date:
+        query = query.filter(Payment.payment_date >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date:
+        query = query.filter(Payment.payment_date <= datetime.strptime(end_date, '%Y-%m-%d'))
+
+    payments = query.all()
+    
+    return render_template('manage_billing.html', payments=payments, status=status, start_date=start_date, end_date=end_date)
+
+@admin_routes.route('/mark_paid/<int:payment_id>', methods=['POST'])
+@login_required
+def mark_paid(payment_id):
+    payment = Payment.query.get_or_404(payment_id)
+    payment.payment_status = 'Paid'
+    db.session.commit()
+    flash('Payment marked as Paid!', 'success')
+    return redirect(url_for('admin.manage_billing'))
+
+@admin_routes.route('/add_payment', methods=['GET', 'POST'])
+@login_required
+def add_payment():
     if current_user.role.name.lower() != 'admin':
         flash('Access denied', 'danger')
         return redirect(url_for('main_routes.home'))
 
+    patients = Patient.query.all()
+
+    if request.method == 'POST':
+        try:
+            patient_id = int(request.form.get('patient_id'))
+            amount = float(request.form.get('amount'))
+            payment_method = request.form.get('payment_method')
+            payment_status = request.form.get('payment_status')
+
+            # Validate input
+            if not (patient_id and amount > 0 and payment_method and payment_status):
+                flash('Invalid data. Please check your inputs.', 'danger')
+                return render_template('add_payment.html', patients=patients)
+
+            transaction_id = str(uuid.uuid4())
+
+            payment = Payment(
+                patient_id=patient_id,
+                amount=amount,
+                payment_method=payment_method,
+                payment_status=payment_status,
+                transaction_id=transaction_id
+            )
+
+            db.session.add(payment)
+            db.session.commit()
+            flash('Payment added successfully!', 'success')
+            return redirect(url_for('admin.manage_billing'))
+
+        except ValueError:
+            flash('Invalid amount or patient ID.', 'danger')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {e}', 'danger')
+
+    return render_template('add_payment.html', patients=patients)
+
+@admin_routes.route('/edit_payment/<int:payment_id>', methods=['GET', 'POST'])
+@login_required
+def edit_payment(payment_id):
+    if current_user.role.name.lower() != 'admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    payment = Payment.query.get_or_404(payment_id)
+
+    if request.method == 'POST':
+        try:
+            payment.amount = float(request.form.get('amount'))
+            payment.payment_method = request.form.get('payment_method')
+            payment.payment_status = request.form.get('payment_status')
+
+            if payment.amount <= 0:
+                flash('Amount must be greater than 0.', 'danger')
+                return redirect(url_for('admin.edit_payment', payment_id=payment_id))
+
+            db.session.commit()
+            flash('Payment updated successfully!', 'success')
+            return redirect(url_for('admin.manage_billing'))
+
+        except ValueError:
+            flash('Invalid amount.', 'danger')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating payment: {e}', 'danger')
+
+    return render_template('edit_payment.html', payment=payment)
+
+@admin_routes.route('/delete_payment/<int:payment_id>', methods=['POST'])
+@login_required
+def delete_payment(payment_id):
+    if current_user.role.name.lower() != 'admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('main_routes.home'))
+
+    payment = Payment.query.get_or_404(payment_id)
+
+    try:
+        db.session.delete(payment)
+        db.session.commit()
+        flash('Payment deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting payment: {e}', 'danger')
+
+    return redirect(url_for('admin.manage_billing'))
+
+@admin_routes.route('/export_payments')
+@login_required
+def export_payments():
     payments = Payment.query.all()
-    return render_template('manage_billing.html', payments=payments)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(['Payment ID', 'Patient Name', 'Amount', 'Payment Method', 'Status', 'Transaction ID', 'Date'])
+
+    for payment in payments:
+        writer.writerow([
+            payment.id,
+            f"{payment.patient.first_name} {payment.patient.last_name}" if payment.patient else "Unknown",
+            payment.amount,
+            payment.payment_method,
+            payment.payment_status,
+            payment.transaction_id or "N/A",
+            payment.payment_date.strftime('%Y-%m-%d %H:%M:%S')
+        ])
+
+    output.seek(0)
+    response = Response(output, content_type='text/csv')
+    response.headers['Content-Disposition'] = 'attachment; filename=payments.csv'
+    return response
+
+@admin_routes.route('/invoice/<int:payment_id>')
+@login_required
+def view_invoice(payment_id):
+    payment = Payment.query.get(payment_id)
+    if not payment:
+        return "Invoice not found", 404
+    return render_template('invoice.html', payment=payment)
+
+
+@admin_routes.route('/generate_invoice/<payment_id>', methods=['GET'])
+@login_required
+def generate_invoice(payment_id):
+    if current_user.role.name.lower() != 'admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('admin.manage_billing'))
+    
+    try:
+        if payment_id == 'all':
+            payments = Payment.query.filter_by(payment_status='Paid').all()
+            flash(f'{len(payments)} invoices generated successfully.', 'success')
+        else:
+            payment = Payment.query.get(payment_id)
+            if not payment:
+                flash('Payment not found.', 'danger')
+                return redirect(url_for('admin.manage_billing'))
+
+            flash(f'Invoice generated for Payment ID: {payment_id}', 'success')
+
+        return redirect(url_for('admin.manage_billing'))
+
+    except Exception as e:
+        flash(f'Error generating invoice: {e}', 'danger')
+        return redirect(url_for('admin.manage_billing'))
 
 @main_routes.route('/admin/users')
 @login_required
@@ -355,7 +645,7 @@ def login(role):
         elif user.role.name.lower() == 'patient':
             return redirect(url_for('patient.patient_dashboard'))
         elif user.role.name.lower() == 'staff':
-            return redirect(url_for('main_routes.staff_dashboard'))
+            return redirect(url_for('staff.staff_dashboard'))
 
     return render_template('login.html', role=role, form=form)
 
@@ -443,10 +733,8 @@ def doctor_dashboard():
         flash("Doctor profile not found!", "danger")
         return redirect(url_for('main_routes.home'))
 
-    # Get all appointments
     appointments = Appointment.query.filter_by(doctor_id=doctor.id).order_by(Appointment.appointment_date).all()
     
-    # Get today's appointments
     today = datetime.today().date()
     todays_appointments = [appt for appt in appointments if appt.appointment_date.date() == today]
 
@@ -474,14 +762,12 @@ def update_profile():
         flash('Doctor profile not found.', 'danger')
         return redirect(url_for('main_routes.doctor_dashboard'))
 
-    # Get updated details from form
     doctor.first_name = request.form.get('first_name')
     doctor.last_name = request.form.get('last_name')
     doctor.specialization = request.form.get('specialization')
     doctor.contact_number = request.form.get('contact_number')
     doctor.email = request.form.get('email')
 
-    # Commit changes
     db.session.commit()
     flash('Profile updated successfully!', 'success')
     return redirect(url_for('main_routes.doctor_dashboard'))
@@ -601,17 +887,13 @@ def view_prescription(prescription_id):
 def view_prescription_patient(prescription_id):
     prescription = Prescription.query.get_or_404(prescription_id)
 
-    # Get the patient linked to the logged-in user
     patient = Patient.query.filter_by(user_id=current_user.id).first()
 
-    # Ensure patient exists and that the prescription belongs to the logged-in patient
     if not patient or prescription.patient_id != patient.id:
         flash("You are not authorized to view this prescription.", "danger")
         return redirect(url_for('patient.patient_dashboard'))
 
     return render_template('view_prescription.html', prescription=prescription)
-
-from datetime import datetime
 
 @doctor_routes.route('/prescription/edit/<int:prescription_id>', methods=['GET', 'POST'])
 @login_required
@@ -703,10 +985,7 @@ def add_medical_record(patient_id):
 @login_required
 def medical_records(patient_id):
     patient = Patient.query.get_or_404(patient_id)
-    
-    
 
-    # Fetch only the records for this specific patient
     records = MedicalRecord.query.filter_by(patient_id=patient.id).all()
 
     return render_template("medical_records.html", patient=patient, records=records)
@@ -716,7 +995,6 @@ def medical_records(patient_id):
 def update_medical_record(medical_record_id):
     record = MedicalRecord.query.get_or_404(medical_record_id)
 
-    # Ensure only the doctor who created the record can edit it
     if current_user.role.name.lower() != 'doctor' or record.doctor.user_id != current_user.id:
         flash("Unauthorized access!", "danger")
         return redirect(url_for('doctor_routes.medical_records', patient_id=record.patient_id))
@@ -738,7 +1016,6 @@ def update_medical_record(medical_record_id):
 def delete_medical_record(medical_record_id):
     record = MedicalRecord.query.get_or_404(medical_record_id)
 
-    # Ensure only the doctor who created the record or an admin can delete it
     if current_user.role.name.lower() != 'doctor' or record.doctor.user_id != current_user.id:
         flash("Unauthorized action!", "danger")
         return redirect(url_for('doctor_routes.medical_records', patient_id=record.patient_id))
@@ -748,13 +1025,3 @@ def delete_medical_record(medical_record_id):
     flash('Medical record deleted successfully!', 'success')
 
     return redirect(url_for('doctor_routes.medical_records', patient_id=record.patient_id))
-
-
-@main_routes.route('/staff_dashboard')
-@login_required
-def staff_dashboard():
-    if current_user.role.name.lower() != 'staff':
-        flash('Access denied', 'danger')
-        return redirect(url_for('main_routes.home'))
-
-    return render_template('dashboard_staff.html')

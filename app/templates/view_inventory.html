@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container">
+    <h2>Pharmacy Inventory</h2>
+
+    <!-- Button to Add a New Medicine -->
+    <a href="{{ url_for('pharmacy.add_medicine') }}" class="btn btn-success mb-3">Add New Medicine</a>
+
+    <!-- Inventory Table -->
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Medicine Name</th>
+          <th>Category</th>
+          <th>Stock Quantity</th>
+          <th>Price</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for medicine in medicines %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ medicine.name }}</td>
+            <td>{{ medicine.category }}</td>
+            <td>{{ medicine.stock_quantity }}</td>
+            <td>${{ medicine.price }}</td>
+            <td>
+              <!-- Buttons for viewing or editing details -->
+              <a href="{{ url_for('pharmacy.view_medicine', medicine_id=medicine.id) }}" class="btn btn-info btn-sm">View</a>
+              <a href="{{ url_for('pharmacy.edit_medicine', medicine_id=medicine.id) }}" class="btn btn-warning btn-sm">Edit</a>
+              <a href="{{ url_for('pharmacy.delete_medicine', medicine_id=medicine.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this medicine?')">Delete</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="text-center">No medicines available in the inventory.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

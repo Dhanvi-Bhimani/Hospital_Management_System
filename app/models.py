@@ -64,9 +64,11 @@ class Staff(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
     position = db.Column(db.String(100), nullable=False)
-    contact_number = db.Column(db.String(15))
+    department = db.Column(db.String(100), nullable=True)  # NEW FIELD (Categorizing staff)
+    contact_number = db.Column(db.String(15), unique=True)  # UNIQUE CONTACT NUMBER
 
     user = db.relationship('User', back_populates='staff_profile')
+    managed_pharmacy = db.relationship('Pharmacy', back_populates='pharmacy_manager', lazy=True)  # NEW RELATIONSHIP
 
 # Appointment Model
 class Appointment(db.Model):
@@ -115,6 +117,9 @@ class Pharmacy(db.Model):
     price_per_unit = db.Column(db.Float, nullable=False)
     expiry_date = db.Column(db.Date)
 
+    dispensed_by = db.Column(db.Integer, db.ForeignKey('staff.id'))  # NEW FIELD: TRACKS WHO ISSUED MEDICINE
+    pharmacy_manager = db.relationship('Staff', back_populates='managed_pharmacy')  # RELATES TO STAFF
+
 # Prescription Model
 class Prescription(db.Model):
     __tablename__ = 'prescription'
@@ -126,7 +131,9 @@ class Prescription(db.Model):
     instructions = db.Column(db.Text, nullable=True)    
     date_prescribed = db.Column(db.DateTime, default=datetime.utcnow)  
     end_date = db.Column(db.DateTime, nullable=True) 
-    
+    dispensed = db.Column(db.Boolean, default=False)  # NEW FIELD: CHECK IF MEDICINE IS GIVEN
+    dispensed_by = db.Column(db.Integer, db.ForeignKey('staff.id'), nullable=True)  # NEW FIELD: WHO ISSUED IT
+
     patient = db.relationship('Patient', back_populates='prescriptions')
     doctor = db.relationship('Doctor', back_populates='prescriptions')
 
@@ -151,6 +158,7 @@ class Payment(db.Model):
     payment_status = db.Column(db.String(20), nullable=False, default='Pending')
     transaction_id = db.Column(db.String(100), unique=True, nullable=True)
     payment_date = db.Column(db.DateTime, default=datetime.utcnow)
+    category = db.Column(db.String(50), nullable=False)
 
     patient = db.relationship('Patient', back_populates='payments')
 
